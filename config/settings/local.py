@@ -1,7 +1,8 @@
 from os import getenv, path
 from dotenv import load_dotenv
 
-from . import SECRET_KEY
+# config/settings/local.py
+
 from .base import * # noqa
 from .base import BASE_DIR
 
