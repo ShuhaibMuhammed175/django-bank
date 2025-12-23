@@ -28,7 +28,7 @@ DOMAIN = getenv("DOMAIN")
 
 MAX_UPLOAD_SIZE = 1 * 1024 * 1024
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:8080"]
 
 LOCKOUT_DURATION = timedelta(minutes=1)
 

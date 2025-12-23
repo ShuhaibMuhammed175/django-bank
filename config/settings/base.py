@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from os import getenv, path
 from loguru import logger
-from datetime import timedelta
+from datetime import timedelta, date
 import cloudinary
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -146,8 +146,13 @@ STATIC_ROOT = str(BASE_DIR / "staticfiles")
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 AUTH_USER_MODEL = 'user_auth.User'
+
+DEFAULT_BIRTH_DATE = date(1900, 1, 1)
+DEFAULT_DATE = date(2000, 1, 1)
+DEFAULT_EXPIRY_DATE = date(2024, 1, 1)
+DEFAULT_COUNTRY = "KE"
+DEFAULT_PHONE_NUMBER = "+250784123456"
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': "drf_spectacular.openapi.AutoSchema",
@@ -180,6 +185,7 @@ CELERY_TASK_TIME_LIMIT = 5 * 60
 CELERY_TASK_SOFT_TIME_LIMIT = 60
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_WORKER_SEND_TASK_EVENTS = True
+
 
 
 CLOUDINARY_CLOUD_NAME = getenv("CLOUDINARY_CLOUD_NAME")
