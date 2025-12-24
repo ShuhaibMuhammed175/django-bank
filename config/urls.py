@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.conf import settings
-from core_apps.user_auth.views import TestLoggingView
+
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -21,6 +21,9 @@ path(settings.ADMIN_URL, admin.site.urls),
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
+
+    path("api/v1/auth/", include("djoser.urls")),
+    path("api/v1/auth/", include("core_apps.user_auth.urls")),
 ]
 
 admin.site.site_header = "NextGen Bank Admin"
