@@ -32,6 +32,21 @@ Basically:
 It records who viewed what and when.
 """
 class ContentView(TimeStampedModel):
+    '''ContentType is a Django table that contains:
+
+    app name
+    model name
+
+    Example rows inside django_content_type
+
+    | id | app_label | model   |
+| -- | --------- | ------- |
+| 7  | blog      | post    |
+| 8  | store     | product |
+| 9  | users     | profile |
+
+    '''
+
     content_type = models.ForeignKey(
         ContentType, on_delete=models.CASCADE, verbose_name=_("Content Type")
     )
