@@ -1,5 +1,6 @@
 from typing import Any, List
 
+from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -14,6 +15,8 @@ from rest_framework.request import Request
 
 from core_apps.common.models import ContentView
 from core_apps.common.permissions import IsBranchManager
+from core_apps.accounts.utils import create_bank_account
+from core_apps.accounts.models import BankAccount
 from core_apps.common.renderers import GenericJSONRenderer
 from .models import NextOfKin, Profile
 from .serializers import NextOfKinSerializer, ProfileListSerializer, ProfileSerializer
@@ -60,10 +63,6 @@ class ProfileListAPIView(generics.ListAPIView):
 
 class ProfileDetailAPIView(generics.RetrieveUpdateAPIView):
     serializer_class = ProfileSerializer
-    # Parsers define how request body is interpreted:
-    # - JSONParser → reads JSON payload
-    # - FormParser → reads HTML form submissions (no files)
-    # - MultiPartParser → reads multipart form-data (used for file uploads)
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     renderer_classes = [GenericJSONRenderer]
     object_label = "profile"
@@ -75,7 +74,6 @@ class ProfileDetailAPIView(generics.RetrieveUpdateAPIView):
             return profile
         except Profile.DoesNotExist:
             raise Http404("Profile does not exist")
-
 
     def record_profile_view(self, profile: Profile) -> None:
         content_type = ContentType.objects.get_for_model(profile)
@@ -112,12 +110,53 @@ class ProfileDetailAPIView(generics.RetrieveUpdateAPIView):
 
         try:
             serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
+            with transaction.atomic():
+                updated_instance = serializer.save()
+
+                if updated_instance.is_complete_with_next_of_kin():
+                    existing_account = BankAccount.objects.filter(
+                        user=request.user,
+                        currency=updated_instance.account_currency,
+                        account_type=updated_instance.account_type,
+                    ).first()
+
+                    if not existing_account:
+                        bank_account = create_bank_account(
+                            request.user,
+                            currency=updated_instance.account_currency,
+                            account_type=updated_instance.account_type,
+                        )
+                        message = (
+                            "Profile updated and new bank account created successfully. An email "
+                            "has been sent to you with further instructions"
+                        )
+                    else:
+                        message = (
+                            "Profile updated successfully. No new account created as one already "
+                            "exists for this currency and type."
+                        )
+                    return Response(
+                        {
+                            "message": message,
+                            "data": serializer.data,
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+                else:
+                    return Response(
+                        {
+                            "message": "Profile updated successfully. Please complete all "
+                            "required fields and at least one next of kin to create a "
+                            "bank account.",
+                            "data": serializer.data,
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
         except serializers.ValidationError as e:
             return Response({"errors": e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data)
 
     def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         kwargs["partial"] = True
@@ -125,7 +164,6 @@ class ProfileDetailAPIView(generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer: ProfileSerializer) -> None:
         serializer.save()
-
 
 class NextOfKinAPIView(generics.ListCreateAPIView):
     serializer_class = NextOfKinSerializer
