@@ -39,7 +39,7 @@ class User(AbstractUser):
     class RoleChoices(models.TextChoices):
         CUSTOMER = "customer", _("Customer")
         ACCOUNT_EXECUTIVE = (
-            "account_execute",
+            "account_executive",
             _("Account Executive"),
         )
         TELLER = "teller", _("Teller")
