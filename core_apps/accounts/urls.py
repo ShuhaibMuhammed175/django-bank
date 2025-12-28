@@ -2,8 +2,8 @@ from django.urls import path
 from .views import (
     AccountVerificationView,
     DepositView,
-    # InitiateWithdrawalView,
-    # VerifyUsernameAndWithdrawAPIView,
+    InitiateWithdrawalView,
+    VerifyUsernameAndWithdrawAPIView,
     # InitiateTransferView,
     # VerifyOTPView,
     # VerifySecurityQuestionView,
@@ -18,16 +18,16 @@ urlpatterns = [
         name="account_verification",
     ),
     path("deposit/", DepositView.as_view(), name="account_deposit"),
-    # path(
-    #     "initiate-withdrawal/",
-    #     InitiateWithdrawalView.as_view(),
-    #     name="initiate_withdrawal",
-    # ),
-    # path(
-    #     "verify-username-and-withdraw/",
-    #     VerifyUsernameAndWithdrawAPIView.as_view(),
-    #     name="verify_username_and_withdraw",
-    # ),
+    path(
+        "initiate-withdrawal/",
+        InitiateWithdrawalView.as_view(),
+        name="initiate_withdrawal",
+    ),
+    path(
+        "verify-username-and-withdraw/",
+        VerifyUsernameAndWithdrawAPIView.as_view(),
+        name="verify_username_and_withdraw",
+    ),
     # path(
     #     "transfer/initiate/", InitiateTransferView.as_view(), name="initiate_transfer"
     # ),
