@@ -14,6 +14,15 @@ from decimal import Decimal
 from .serializers import AccountVerificationSerializer, CustomerInfoSerializer, DepositSerializer, TransactionSerializer, UsernameVerificationSerializer, SecurityQuestionSerializer, OTPVerificationSerializer
 from django.db import transaction
 from loguru import logger
+from .pagination import StandardResultsSetPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from dateutil import parser
+from django.db.models import Q
+from rest_framework.filters import OrderingFilter
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework import status
+# from .tasks import generate_transaction_pdf
 
 class AccountVerificationView(generics.UpdateAPIView):
     queryset = BankAccount.objects.all()
@@ -458,3 +467,78 @@ class VerifyOTPView(generics.CreateAPIView):
             TransactionSerializer(transfer_transaction).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+
+class TransactionListAPIView(generics.ListAPIView):
+    serializer_class = TransactionSerializer
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    ordering_fields = ["created_at", "amount"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        user = self.request.user
+        """
+        Q is a special helper class in Django used to build OR, AND, and NOT queries in a clean
+        This line fetches all transactions where:
+        the current user is the sender, OR
+        the current user is the receiver
+        So it finds all transactions related to the user, regardless of whether they sent money or received money.
+        """
+        queryset = Transaction.objects.filter(Q(sender=user) | Q(receiver=user))
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+        account_number = self.request.query_params.get("account_number")
+
+        if start_date:
+            try:
+                """
+                parser.parse() is a function that takes a date in text/string form and converts it 
+                to a real Python datetime object.
+                """
+                start_date = parser.parse(start_date)
+                """
+                __gte means greater than or equal to
+                """
+                queryset = queryset.filter(created_at__gte=start_date)
+            except ValueError:
+                pass
+
+        if end_date:
+            try:
+                end_date = parser.parse(end_date)
+                queryset = queryset.filter(created_at__lte=end_date)
+            except ValueError:
+                pass
+
+        if account_number:
+            try:
+                account = BankAccount.objects.get(
+                    account_number=account_number, user=user
+                )
+                queryset = queryset.filter(
+                    Q(sender_account=account) | Q(receiver_account=account)
+                )
+            except BankAccount.DoesNotExist:
+                """
+                objects.none() is a Django QuerySet method that creates an empty result set — like an empty list [], 
+                but still behaves like a queryset.
+                """
+                queryset = Transaction.objects.none()
+
+        return queryset
+
+    def list(self, request, *args, **kwargs) -> Response:
+
+        response = super().list(request, *args, **kwargs)
+        account_number = request.query_params.get("account_number")
+        if account_number:
+            logger.info(
+                f"User {request.user.email} successfully retrieved transactions for account: {account_number}"
+            )
+        else:
+            logger.info(
+                f"User {request.user.email} retrieved transactions(all accounts)"
+            )
+        return response
